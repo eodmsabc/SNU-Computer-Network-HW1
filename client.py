@@ -1,9 +1,13 @@
 import socket
 from mysocket import *
 
+def parse_board(ins):
+    return [[int(ins[i * 5 + j]) for j in range(5)] for i in range(5)]
+
 def run_client(HOST, PORT):
     sock = None
     role = None
+    
     # Login Phase
     while True:
         userid = input()
@@ -21,7 +25,7 @@ def run_client(HOST, PORT):
             sock.close()
             continue
     
-    #
+    # Game Start
 
     # Close
     sock.close()

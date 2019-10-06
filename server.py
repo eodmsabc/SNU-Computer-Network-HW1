@@ -2,10 +2,145 @@ import socket
 import random
 from mysocket import *
 
+# Generate gameboard
 def gen_board():
-    return 0
+    board = [[[0] * 5 for i in range(5)] for j in range(5)]
+    for player in range(5):
+        arr = random.sample(range(1, 100), 25)
+        for i in range(5):
+            for j in range(5):
+                board[player][i][j] = arr[i * 5 + j]
+    return board
+
+# Convert board to string (for transfer)
+def board2str(board):
+    ret = ''
+    for i in range(5):
+        for j in range(5):
+            ret += str(board[i][j]) + ' '
+    return ret.strip()
+
+# Calculate greedy score for each position
+def calcpt(board, i, j):
+    ret = 0
+
+    # Row
+    r = True
+    pt = 1
+    for a in range(5):
+        if board[i][a] < 0:
+            pt *= 5
+    ret += pt
+
+    # Column
+    r = True
+    pt = 1
+    for a in range(5):
+        if board[a][j] < 0:
+            pt *= 5
+    ret += pt
+
+    # Diagonal 1
+    if i == j:
+        r = True
+        pt = 1
+        for a in range(5):
+            if board[a][a] < 0:
+                pt *= 5
+        ret += pt
+    
+    # Diagonal 2
+    if i == 4-j:
+        r = True
+        pt = 1
+        for a in range(5):
+            if board[a][4-a] < 0:
+                pt *= 5
+        ret += pt
+
+    return ret
+
+# Greedy select for AI player
+def selectnum(board):
+    sel = board[0][0]
+    mx = 0
+    for i in range(5):
+        for j in range(5):
+            pt = calcpt(board, i, j)
+            if mx < pt:
+                mx = pt
+                sel = board[i][j]
+    return sel
+
+# Process gameboard with selected number num
+def process(gameboard, num):
+    for p in range(5):
+        for i in range(5):
+            for j in range(5):
+                if gameboard[p][i][j] == num:
+                    gameboard[p][i][j] = -num
+    return gameboard
+
+# Check if gane finished
+def chkend(board):
+    # Row
+    r = True
+    for i in range(5):
+        r = True
+        for j in range(5):
+            if board[i][j] > 0:
+                r = False
+                break
+        if r:
+            return True
+    
+    # Column
+    for i in range(5):
+        r = True
+        for j in range(5):
+            if board[j][i] > 0:
+                r = False
+                break
+        if r:
+            return True
+
+    # Diagonal
+    r = True
+    for i in range(5):
+        if board[i][i] > 0:
+            r = False
+            break
+    if r:
+        return True
+
+    r = True
+    for i in range(5):
+        if board[i][4-i] > 0:
+            r = False
+            break
+    if r:
+        return True
+
+    return False
+
+# Check if copartner plays in right way
+def cheatCheck(board, cheat, sel):
+    if cheat == 0:
+        return True
+    f = False
+    for i in range(5):
+        for j in range(5):
+            if board[i][j] == cheat:
+                f = True
+                break
+        if f:
+            break
+    if not f:
+        return True
+    return cheat == sel
 
 def run_server(sock):
+    return
     # Current number of players. Start from 3 due to AI players.
     player_count = 3
 
@@ -17,6 +152,7 @@ def run_server(sock):
 
     # Role assignment   0: Main_culprit, 1: Copartner
     role = random.sample(range(2), 2)   # 1st arrival: role[0], 2nd arrival: role[1]
+    role += [2, 2, 2]
 
     # Decide turn[0]
     turn = random.sample(range(5), 5)
@@ -41,10 +177,64 @@ def run_server(sock):
         send_to(conn[nc], 'P', str(role[nc]))
         nc += 1
 
-    # Game Start
-    send_to(conn[0], 'S')
-    send_to(conn[1], 'S')
-        # mylst = list(map(int, ndata.split(' ')))
+    # Game Ready, send gameboard to clients
+    for i in range(2):
+        send_to(conn[i], 'S', board2str(gameboard[i]))
+
+    # Constant
+    culprit = 0
+    copartner = 1
+
+    # Game Loop
+    cnt = 0
+    winner = None
+    cheat = 0  # Cheating number from main_culprit to copartner
+
+    while True: 
+        player = turn[cnt]
+        sel = 0
+
+        # Client
+        if role[player] == culprit:
+            send_to(conn[player], 'T', board2str(gameboard[player]))
+            read = read_from(conn[player])["data"]
+            sel = int(read[0])
+            cheat = int(read[1])
+
+        elif role[player] == copartner:
+            send_to(conn[player], 'T ' + str(cheat), board2str(gameboard[player]))
+            while True:
+                read = read_from(conn[player])["data"]
+                sel = int(read[0])
+                if cheatCheck(gameboard[player], cheat, sel):
+                    break
+                else:   # Wrong behavior, Reject
+                    send_to(conn[player], 'R')
+
+        else:
+            sel = selectnum(gameboard[player])
+        
+        # Update gameboard
+        gameboard = process(gameboard, sel)
+        for p in range(5):
+            send_to(conn[p], 'U', board2str(gameboard[p]))
+
+        # Game finish check
+        if chkend(gameboard[player]):
+            winner = player
+            break
+
+        cnt += 1
+    
+    print('Game Finished')
+    if winner <= 1:
+        print('Winner: ' + userid[winner])
+    else:
+        print('Winner: AI_' + str(winner-2))
+    
+    
+    
+    ##### mylst = list(map(int, ndata.split(' ')))
 
     # when 2 human players are connected, server sends to these players 'game start' signal with initial game board.
     # client state changes from wait to game
@@ -64,8 +254,8 @@ def run_server(sock):
     # if the game is not end yet, i increases and next turn starts
 
     # protocol
-    # Game Start:   'S R 00 00 00 ... 00' => 25 number with S prefix, R role (0 for main culprit, 1 for copartner)
-    # Update board: 'U 00 00 00 ... 00' => 25 number with U prefix
+    # Game Start:   'S 00 00 00 ... 00' => 25 number with S prefix, R role (0 for main culprit, 1 for copartner)
+    # Update board: 'B 00 00 00 ... 00' => 25 number with U prefix
     # Start turn:   'T'
     # Client ans:   '00'
     # Finish:       'F W' => W is winner (0 ~ 4) 0 is main culprit, 1 is copartner, 2~4: AI player.
@@ -87,7 +277,6 @@ def run_server(sock):
              #   break
      #       con.sendall(data)
     
-    #s.close()
 
 if __name__ == "__main__":
     HOST = '127.0.0.1'
