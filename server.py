@@ -28,7 +28,6 @@ def calcpt(board, i, j):
     ret = 0
 
     # Row
-    r = True
     pt = 1
     for a in range(5):
         if board[i][a] < 0:
@@ -36,7 +35,6 @@ def calcpt(board, i, j):
     ret += pt
 
     # Column
-    r = True
     pt = 1
     for a in range(5):
         if board[a][j] < 0:
@@ -45,7 +43,6 @@ def calcpt(board, i, j):
 
     # Diagonal 1
     if i == j:
-        r = True
         pt = 1
         for a in range(5):
             if board[a][a] < 0:
@@ -54,7 +51,6 @@ def calcpt(board, i, j):
     
     # Diagonal 2
     if i == 4-j:
-        r = True
         pt = 1
         for a in range(5):
             if board[a][4-a] < 0:
@@ -150,9 +146,6 @@ def cheatCheck(board, cheat, sel):
     return cheat == sel
 
 def run_server(sock):
-    # Current number of players. Start from 3 due to AI players.
-    player_count = 3
-
     # clientections for 2 clients.
     client = [0, 0]
     addr = [0, 0]
@@ -183,7 +176,7 @@ def run_server(sock):
             send_to(client[nc], 'F')
             continue
         print('Accepted')
-        userid[nc] = 'User[' + read + ']'
+        userid[nc] = read
         send_to(client[nc], 'P', str(role[nc]))
         nc += 1
 
@@ -203,7 +196,7 @@ def run_server(sock):
 
     # Game Loop
     while True:
-        time.sleep(0.1)
+        time.sleep(0.5)
         player = turn[cnt]
         sel = 0
         print('Player ' + str(player) + "'s turn")
@@ -212,12 +205,27 @@ def run_server(sock):
         # Client
         if role[player] == culprit:
             send_to(client[player], 'T', board2str(gameboard[player]))
+            # Read number
             read = read_from(client[player])["data"]
             sel = int(read[0])
+
+            # Process with selected number
+            gameboard = process(gameboard, sel)
+
+            # Game finish check
+            winner = chkend(gameboard)
+            if winner:
+                break
+            
+            for p in range(2):
+                send_to(client[p], 'U', board2str(gameboard[p]))
+
+            # Read cheat number
             read = read_from(client[player])["data"]
             cheat = int(read[0])
 
         elif role[player] == copartner:
+            # Send cheat with turn start signal 'T'
             send_to(client[player], 'T ' + str(cheat), board2str(gameboard[player]))
             while True:
                 read = read_from(client[player])["data"]
@@ -252,6 +260,8 @@ def run_server(sock):
         winnerstring += w + ' '
     for i in range(2):
         send_to(client[i], 'W', winnerstring)
+
+
 
 if __name__ == "__main__":
     HOST = '127.0.0.1'

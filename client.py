@@ -102,21 +102,28 @@ def check_cheat_exist():
         if cheat_exist:
             break
 
-def copartnerbutton(i, j):
+def buttonstate(i, j):
     global window, server, role, userid
     global bingobutton, board, cheat
     global myTurn, second_select, cheat_exist
     global culprit, copartner
-    if role == culprit:
-        return 'normal'
-    if not cheat_exist:
-        return 'normal'
     if not myTurn:
-        return 'normal'
-    if board[i][j] == cheat:
-        return 'normal'
-    else:
         return 'disabled'
+    if role == culprit:
+        if board[i][j] > 0:
+            return 'normal'
+        else:
+            return 'disabled'
+    else:
+        if not cheat_exist:
+            if board[i][j] > 0:
+                return 'normal'
+            else:
+                return 'disabled'
+        if board[i][j] == cheat:
+            return 'normal'
+        else:
+            return 'disabled'
 
 def board_render():
     global window, server, role, userid
@@ -126,7 +133,7 @@ def board_render():
 
     for i in range(5):
         for j in range(5):
-            st = copartnerbutton(i, j)
+            st = buttonstate(i, j)
             color = color = 'SystemButtonFace' if board[i][j] > 0 else 'red'
             bingobutton[i][j].config(text=board[i][j] if board[i][j] > 0 else -board[i][j])
             bingobutton[i][j].config(bg=color)
@@ -143,7 +150,7 @@ def after_login(event):
         return
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.connect((HOST, PORT))
-    send_to(server, 'U', uid)
+    send_to(server, 'I', uid)
     read = read_from(server)
     if read["type"] == 'P':
         role = int(read["data"][0])
