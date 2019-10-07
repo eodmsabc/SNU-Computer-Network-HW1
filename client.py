@@ -4,6 +4,7 @@ import tkinter
 import tkinter.font
 from mysocket import *
 
+# Connection Information
 HOST = '127.0.0.1'
 PORT = 20395
 window = tkinter.Tk()
@@ -20,6 +21,7 @@ winnerlabel = [None for i in range(5)]
 culprit = 0
 copartner = 1
 
+# Multithread gameplay class
 class GP(threading.Thread):
     def __init__(self, tkwindow):
         self.root = tkwindow
@@ -53,7 +55,7 @@ class GP(threading.Thread):
                     winnerlabel[i].config(text=('Winner: ' + winner[i]))
                     winnerlabel[i].place(x=100,y=100+i*30)
                 print('Finished')
-                break
+                break   # Thread terminate
             
             # Update Board
             elif header == 'U':
@@ -82,7 +84,7 @@ class GP(threading.Thread):
 
             else:
                 print('Server Disconnected')
-                break
+                break   # Thread terminate
 
 gp = GP(window)
 
@@ -165,6 +167,7 @@ def after_login(event):
         statuslabel.config(text="Status: Waiting...")
         statuslabel.place(x=0, y=20)
 
+        # GP thread start
         gp.start()
 
     else:

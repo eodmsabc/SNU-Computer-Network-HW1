@@ -251,7 +251,9 @@ def run_server(sock):
 
         cnt += 1
         cnt %= 5
-    
+    # end Game Loop
+
+    # Finished
     print('Game Finished')
     winnerstring = ''
     winnerid = list(map(lambda x:userid[x], winner))
@@ -264,6 +266,7 @@ def run_server(sock):
 
 
 if __name__ == "__main__":
+    # Connection Information
     HOST = '127.0.0.1'
     PORT = 20395
 
