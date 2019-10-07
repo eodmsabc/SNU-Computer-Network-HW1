@@ -1,5 +1,6 @@
 import socket
 import random
+import time
 from mysocket import *
 
 # Generate gameboard
@@ -182,7 +183,7 @@ def run_server(sock):
             send_to(client[nc], 'F')
             continue
         print('Accepted')
-        userid[nc] = read
+        userid[nc] = 'User[' + read + ']'
         send_to(client[nc], 'P', str(role[nc]))
         nc += 1
 
@@ -202,16 +203,19 @@ def run_server(sock):
 
     # Game Loop
     while True:
+        time.sleep(0.1)
         player = turn[cnt]
         sel = 0
         print('Player ' + str(player) + "'s turn")
+        print('Cheat Number: ' + str(cheat))
 
         # Client
         if role[player] == culprit:
             send_to(client[player], 'T', board2str(gameboard[player]))
             read = read_from(client[player])["data"]
             sel = int(read[0])
-            cheat = int(read[1])
+            read = read_from(client[player])["data"]
+            cheat = int(read[0])
 
         elif role[player] == copartner:
             send_to(client[player], 'T ' + str(cheat), board2str(gameboard[player]))
@@ -242,55 +246,12 @@ def run_server(sock):
     
     print('Game Finished')
     winnerstring = ''
-    for w in winner:
-        print('Winner: ' + userid[w])
-        winnerstring += str(w) + ' '
+    winnerid = list(map(lambda x:userid[x], winner))
+    for w in winnerid:
+        print('Winner: ' + w)
+        winnerstring += w + ' '
     for i in range(2):
         send_to(client[i], 'W', winnerstring)
-    
-    ##### mylst = list(map(int, ndata.split(' ')))
-
-    # when 2 human players are clientected, server sends to these players 'game start' signal with initial game board.
-    # client state changes from wait to game
-
-    # Game progress
-    # i; 0>1>2>3>4>0>1>2>...
-    # turn[i] = k, kth player playes
-    # if k == 0 or 1 then server let player know that it's now player's turn (send to client[k])
-    # if role[k] == 0 then client[k] is main_culprit, wait for 2 number, first one is bingo num, second is cheat
-    # else if role[k] == 1 then client[k] is copartner. server sends cheat number with start signal.
-    # server checks if copartner plays correct way. if good, send 'turn end' signal. if not, replay signal.
-    # if k is main_culprit, after receiving cheat num, server send ack (turn end) right after applying bingo result.
-    # after applying bingo result, server sends to all players with updated bingo game board.
-    # if bingo game ends, server sends 'turn end' signal to last player and send 'game finish' signal to all clientected player (0, 1) instead of updated bingo board.
-    # with winner information.
-
-    # if the game is not end yet, i increases and next turn starts
-
-    # protocol
-    # Game Start:   'S 00 00 00 ... 00' => 25 number with S prefix, R role (0 for main culprit, 1 for copartner)
-    # Update board: 'B 00 00 00 ... 00' => 25 number with U prefix
-    # Start turn:   'T'
-    # Client ans:   '00'
-    # Finish:       'F W' => W is winner (0 ~ 4) 0 is main culprit, 1 is copartner, 2~4: AI player.
-    # Client compare W with own role. if match, you win! else if partner, ... else ai_n wins
-
-    #if True:
-        # Waiting Players
-        #while num_player < 5:
-            #client[num_player - 3], addr[num_player - 3] = s.accept()
-            #print('clientected by ', addr[num_player - 3])
-            #num_player += 1
-        
-    #    print("5 players ready. Game Start.")
-        # Game Start
-    #    while True:
-    #        con, add = s.accept()
-     #       data = con.recv(1024)
-            #if not data:
-             #   break
-     #       con.sendall(data)
-    
 
 if __name__ == "__main__":
     HOST = '127.0.0.1'
