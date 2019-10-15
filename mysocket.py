@@ -1,3 +1,5 @@
+# socket interface
+
 import socket
 
 def send_to(sock, tp, data=''):
